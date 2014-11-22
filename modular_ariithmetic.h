@@ -3,38 +3,7 @@
 #include <cstdint>
 #include <cassert>
 
-namespace internal {
-template <class Policy>
-class EquivalenceClass;
-template <int64_t Modulo, class Integer = int64_t>
-FixedModuloReminder<Modulo, Integer> operator+(
-        const FixedModuloReminder<Modulo, Integer>& lhs,
-        const FixedModuloReminder<Modulo, Integer>& rhs) {
-    FixedModuloReminder<Modulo, Integer> res(lhs);
-    res.setValue(getReminder(lhs.value() + rhs.value()));
-    return res;
-}
-
-template <int64_t Modulo, class Integer = int64_t>
-FixedModuloReminder<Modulo, Integer> operator-(
-        const FixedModuloReminder<Modulo, Integer>& lhs,
-        const FixedModuloReminder<Modulo, Integer>& rhs) {
-    FixedModuloReminder<Modulo, Integer> res(lhs);
-    res.setValue(getReminder(lhs.value() - rhs.value()));
-    return res;
-}
-
-template <int64_t Modulo, class Integer = int64_t>
-FixedModuloReminder<Modulo, Integer> operator*(
-        const FixedModuloReminder<Modulo, Integer>& lhs,
-        const FixedModuloReminder<Modulo, Integer>& rhs) {
-    FixedModuloReminder<Modulo, Integer> res(lhs);
-    res.setValue(getReminder(lhs.value() * rhs.value()));
-    return res;
-}
-
-} // namespace internal
-
+namespace modular_arithmetic {
 
 template <class Integer = int64_t>
 Integer getReminder(Integer value, Integer modulo) {
@@ -44,35 +13,49 @@ Integer getReminder(Integer value, Integer modulo) {
     return value < 0 ? value + modulo : value;
 }
 
-template <int64_t Modulo, class Integer = int64_t>
-class FixedModuloReminder {
+template <class Integer = int64_t>
+class Residue {
 public:
-    FixedModuloReminder(Integer value) : modulo_(Modulo) {
-        assert(modulo_ > 0);
-        setValue(value);
-    }
+    Residue(Integer value, Integer modulo):
+        value_(getReminder(value, modulo)),
+        modulo_(modulo)
+    {}
 
-    void setValue(Integer value) { value_ = getReminder(value, modulo_); }
-private:
-    Integer value_;
-    Integer modulo_;
-};
-
-template <class Integer>
-class FixedModuloReminder<0, Integer> {
-public:
-    FixedModuloReminder(Integer value, Integer modulo) : modulo_(modulo) {
-        assert(modulo_ > 0);
-        setValue(value);
-    }
-    void setValue(Integer value) { value_ = getReminder(value, modulo_); }
     Integer value() const { return value_; }
+    Residue inverse() const {
+        Integer inversed, tmp;
+        gcdex(value_, modulo_, inversed, tmp);
+        return {inversed, modulo_};
+    }
 
 private:
     Integer value_;
     Integer modulo_;
 };
 
-template <class Integer>
-using ModuloReminder = FixedModuloReminder<0, Integer>;
+template <class Int>
+Residue<Int> operator+(const Residue<Int>& lhs, const Residue<Int>& rhs) {
+    assert(lhs.modulo() == rhs.modulo());
+    return {lhs.value() + rhs.value(), lhs.modulo()};
+}
 
+template <class Int>
+Residue<Int> operator-(const Residue<Int>& lhs, const Residue<Int>& rhs) {
+    assert(lhs.modulo() == rhs.modulo());
+    return {lhs.value() - rhs.value(), lhs.modulo()};
+}
+
+template <class Int>
+Residue<Int> operator*(const Residue<Int>& lhs, const Residue<Int>& rhs) {
+    assert(lhs.modulo() == rhs.modulo());
+    return {lhs.value() * rhs.value(), lhs.modulo()};
+}
+
+template <class Int>
+Residue<Int> operator/(const Residue<Int>& lhs, const Residue<Int>& rhs) {
+    assert(lhs.modulo() == rhs.modulo());
+    assert(rhs > Int(0));
+    return lhs * rhs.inverse();
+}
+
+} // namespace modular_arithmetic
